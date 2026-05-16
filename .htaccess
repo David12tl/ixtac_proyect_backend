@@ -1,0 +1,23 @@
+# 1. Inyectar encabezados CORS para que Vercel tenga acceso a todo el backend
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "POST, GET, OPTIONS, PUT, DELETE"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+</IfModule>
+
+# 2. Responder 200 OK inmediatamente a las peticiones OPTIONS (Preflight de Next.js)
+RewriteEngine On
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ - [R=200,L]
+
+# 3. Tu sistema de enrutamiento original corregido
+<IfModule mod_rewrite.c>
+    # Si el archivo o carpeta que se busca EXISTE realmente en el servidor, no lo redirijas a public
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^(.*)$ - [L]
+
+    # Redirigir todo lo demás a la carpeta public
+    RewriteRule ^$ public/index.php [L]
+    RewriteRule ^((?!public/).*)$ public/index.php?url=$1 [QSA,L]
+</IfModule>
