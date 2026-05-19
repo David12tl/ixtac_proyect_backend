@@ -1,0 +1,16 @@
+{
+    "host": "ftp-ixtacproyect.alwaysdata.net",
+    "username": "ixtacproyect",
+    "password": "Ixtac_proyect2026",
+    "remotePath": "",
+    "protocol": "ftp",
+    "port": 0,
+    "fileNameEncoding": "utf8",
+    "autoUpload": true,
+    "autoDelete": false,
+    "autoDownload": false,
+    "ignore": [
+        ".git",
+        "/.vscode"
+    ]
+}

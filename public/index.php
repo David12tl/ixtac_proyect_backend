@@ -1,59 +1,74 @@
-
 <?php
-require_once __DIR__ . '/../vendor/autoload.php';
-require_once __DIR__ . '/../src/config/constans.php';
+// 🚀 1. Configuración limpia de cabeceras CORS
+namespace App\Middleware {
+    class CorsMiddleware {
+        public static function handle() {
+            header("Access-Control-Allow-Origin: https://ixtac-proyect.vercel.app");
+            header("Access-Control-Allow-Methods: POST, GET, OPTIONS, PUT, DELETE");
+            header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+            header("Access-Control-Allow-Credentials: true");
+            header("Content-Type: application/json; charset=UTF-8");
+        }
+    }
+}
 
-use App\Controllers\AuthController;
-use App\Middleware\AuthMiddleware;
-use App\Middleware\CorsMiddleware;
-use App\Helpers\Response;
+// 📦 2. Flujo Principal del Sistema
+namespace {
+    \App\Middleware\CorsMiddleware::handle();
 
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        http_response_code(200);
+        exit();
+    }
 
-CorsMiddleware::handle();
+    if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+        require_once __DIR__ . '/../vendor/autoload.php';
+    }
 
-// El resto del enrutamiento...
-$requestUri = $_GET['url'] ?? '';
-$requestUri = trim($requestUri, '/');
-$method = $_SERVER['REQUEST_METHOD'];
+    require_once __DIR__ . '/../src/config/database.php';
+    require_once __DIR__ . '/../src/helpers/validator.php';
+    require_once __DIR__ . '/../src/services/authservice.php';
+    require_once __DIR__ . '/../src/helpers/response.php';
 
-switch (true) {
-  // Rutas de autenticación
-    case $requestUri === 'api/register' && $method === 'POST':
-        AuthController::register();
-        break;
+    if (file_exists(__DIR__ . '/../src/models/user.php')) {
+        require_once __DIR__ . '/../src/models/user.php';
+    }
 
-    case $requestUri === 'api/login' && $method === 'POST':
-        AuthController::login();
-        break;
+    require_once __DIR__ . '/../src/controllers/authcontroller.php';
 
-    // Rutas de experiencias
-    case $requestUri === 'api/experiencias' && $method === 'GET':
-        \App\Controllers\ExperienciaController::index();
-        break;
+    if (file_exists(__DIR__ . '/../src/config/constans.php')) {
+        require_once __DIR__ . '/../src/config/constans.php';
+    }
 
-    case preg_match('/^api\/experiencias\/(\d+)$/', $requestUri, $matches) && $method === 'GET':
-        \App\Controllers\ExperienciaController::show((int)$matches[1]);
-        break;
+    // 🚀 LIMPIADOR DE RUTAS INTELIGENTE
+    $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $requestUri = str_replace('index.php/', '', $requestUri); // Remueve index.php si aparece
+    $requestUri = trim($requestUri, '/'); 
+    $method = $_SERVER['REQUEST_METHOD'];
 
-    // Rutas de reservas
-    case $requestUri === 'api/reservas' && $method === 'POST':
-        \App\Controllers\ReservaController::store();
-        break;
+    // 🧭 ENRUTADOR PRINCIPAL ABSOLUTO (Tolera métodos cruzados por redirecciones)
+    switch (true) {
+        case $requestUri === 'api/ping':
+            echo json_encode(["status" => "ok", "mensaje" => "¡Backend respondiendo correctamente!"]);
+            break;
 
-    case $requestUri === 'api/mis-reservas' && $method === 'GET':
-        \App\Controllers\ReservaController::myReservations();
-        break;
+        case $requestUri === 'api/login':
+            $authController = new \App\Controllers\AuthController();
+            $authController->login();
+            break;
 
-    case $requestUri === 'api/perfil' && $method === 'GET':
-        \App\Controllers\UsuarioController::profile();
-        break;
+        case $requestUri === 'api/register':
+            $authController = new \App\Controllers\AuthController();
+            $authController->register();
+            break;
 
-    // Ruta de prueba protegida
-    case $requestUri === 'api/check' && $method === 'GET':
-        $userData = AuthMiddleware::verifyToken();
-        Response::success(['user' => $userData], 'Token válido');
-        break;
-
-    default:
-        Response::error('Ruta no encontrada', 404);
+        default:
+            http_response_code(404);
+            echo json_encode([
+                "error" => "Ruta no encontrada", 
+                "uri" => $requestUri,
+                "metodo" => $method
+            ]);
+            break;
+    }
 }
